@@ -367,15 +367,15 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 
 /* ============ Yapay zekâ ============ */
 /* Supabase bağlantısı: buraya yazın ya da uygulamada Ayarlar > Supabase bağlantısı'ndan girin */
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
+const SUPABASE_URL = "https://ezhquwmacfipxkxpkjep.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_pRFOLT4nqy8Qb6LrcwI6aQ_xM7E4akb";
 const SBKEY="cevap-asistani-supabase";
 function sbConf(){ try{ const c=JSON.parse(localStorage.getItem(SBKEY)||"null"); if(c&&c.url&&c.key) return c; }catch(e){} return SUPABASE_URL&&SUPABASE_ANON_KEY?{url:SUPABASE_URL,key:SUPABASE_ANON_KEY}:null; }
 const OTURUM=(()=>{try{let o=localStorage.getItem(SBKEY+"-oturum");if(!o){o=(crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2));localStorage.setItem(SBKEY+"-oturum",o);}return o;}catch(e){return "anonim";}})();
 async function sb(islem,payload,opts){
   const c=sbConf(); if(!c) throw {code:"not_declared"};
   let r;
-  try{ r=await fetch(c.url.replace(/\/$/,"")+"/functions/v1/yanit-uret",{method:"POST",signal:opts&&opts.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+c.key,"apikey":c.key},body:JSON.stringify({islem,oturum:OTURUM,...payload})}); }
+  try{ r=await fetch(c.url.replace(/\/$/,"")+"/functions/v1/cevap-asistani-yanit-uret",{method:"POST",signal:opts&&opts.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+c.key,"apikey":c.key},body:JSON.stringify({islem,oturum:OTURUM,...payload})}); }
   catch(e){ throw {code:e&&e.name==="AbortError"?"cancelled":"upstream_error"}; }
   if(!r.ok){ let d={}; try{d=await r.json();}catch(e){} throw {code:r.status===429?"rate_limited":d.hata==="anahtar_yok"?"sampling_disabled":"upstream_error",message:d.hata}; }
   return r;
@@ -1050,7 +1050,7 @@ function vSettings(){
   </div>
   <div class="card" style="display:flex;flex-direction:column;gap:10px"><h3>Örnek panel / TOPS kayıtları</h3><p class="muted small">Gerçek sistemde admin panel ve TOPS sorgulanacak. Prototipte bu kayıtlar kullanılıyor; yeni mail yazarken bu sicil numaralarını deneyin.</p>
     <div class="tbl-wrap"><table><tr><th>Sicil</th><th>Firma</th><th>Sonuç</th></tr>${Object.entries(PANEL).map(([k,v])=>`<tr><td class="mono">${k}</td><td>${esc(v.firma)}</td><td class="small">${esc(v.senaryo)}</td></tr>`).join("")}</table></div></div>
-  <div class="card" style="display:flex;flex-direction:column;gap:10px"><h3>Supabase bağlantısı</h3><p class="muted small">Yanıt üretimi Supabase'deki <span class="mono">yanit-uret</span> fonksiyonu üzerinden Claude API ile yapılır. Proje adresi ve anon (public) anahtar yeterlidir; Claude API anahtarı Supabase'de gizli değişken olarak durur.</p>
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><h3>Supabase bağlantısı</h3><p class="muted small">Yanıt üretimi Supabase'deki <span class="mono">cevap-asistani-yanit-uret</span> fonksiyonu üzerinden Claude API ile yapılır. Proje adresi ve anon (public) anahtar yeterlidir; Claude API anahtarı Supabase'de gizli değişken olarak durur.</p>
     <label class="f">Proje adresi<input class="inp" id="sbUrl" placeholder="https://xxxx.supabase.co" value="${esc((sbConf()||{}).url||"")}"></label>
     <label class="f">Anon anahtar<input class="inp" id="sbKey" placeholder="eyJ..." value="${esc((sbConf()||{}).key||"")}"></label>
     <div class="row"><button class="btn pri" onclick="sbSave()">Kaydet ve bağlan</button>${AI.msg?`<span class="small" style="color:var(--risk)">${esc(AI.msg)}</span>`:""}${AI.mode==="sb"?`<span class="pill p-ok"><span class="dot"></span>Bağlı · ${esc(AI.model||"")}</span>`:""}</div></div>
