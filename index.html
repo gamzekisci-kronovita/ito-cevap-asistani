@@ -310,7 +310,7 @@ const KOSUL = {
   belge_eposta_hatali:"Faaliyet belgesi konusu, panelde belge hatalı yazılmış adrese gitmiş",
   belge_gonderilmis:"Faaliyet belgesi konusu, panelde belge doğru adrese gönderilmiş",
   belge_yok:"Faaliyet belgesi konusu, panelde bu sicil için belge kaydı yok",
-  aski_odendi:"Askıdan inme konusu, TOPS'ta ödeme alınmış görünüyor"
+  aski_odendi:"Askıdan inme konusu, sistemde ödeme alınmış görünüyor"
 };
 const SEED_TEMPLATES = [
  {id:"T1",ad:"E-imza Sipariş No veya Sicil Talebi",kosul:"belge_sicilsiz",mod:"oto",kaynak:"İleti Örnekleri",anahtar:"",ipucu:"",
@@ -326,7 +326,7 @@ const SEED_TEMPLATES = [
 ];
 const KLASOR = ["Ödeme Butonu Aktif Olmaması Hk.","Türkiye Ticaret Sicili Gazetesi Hk.","Faaliyet Belgesi Genel Bilgi","Askı - Vergiden Dolayı","Askı - Adres Durumundan Dolayı","İletişim Bilgileri (KVKK)","Tasfiye Halinde Firma","Belge Teyidi","Çevirili Faaliyet Belgesi Hk.","A/B İhale Durum Belgesi"];
 
-/* Admin panel / TOPS yerine geçen örnek kayıtlar */
+/* Admin panel yerine geçen örnek kayıtlar */
 const PANEL = {
  "482917":{firma:"Kuzey Yapı İnşaat Ltd. Şti.",durum:"aktif",belge:{tarih:"09.11.2026 16:41",eposta:"muhasebe@kuzeyyapi.exmaple",dogru:"muhasebe@kuzeyyapi.example",siparis:"9112040"},senaryo:"Belge yazım hatalı adrese gitmiş → T2"},
  "315402":{firma:"Demir Makina San. Tic.",durum:"aktif",belge:{tarih:"10.11.2026 08:55",eposta:"satinalma@demirmakina.example",siparis:"9112377"},senaryo:"Belge doğru adrese gitmiş → T3"},
@@ -662,10 +662,10 @@ function decide(an,panel){
   }
   if(an.konu==="askidan_inme"){
     if(!an.sicil) return {t:null,neden:"Askı sorusu ama sicil no yok; personel sicil no isteyecek",kind:"warn"};
-    if(!panel) return {t:null,neden:"Sicil no TOPS'ta bulunamadı ("+an.sicil+")",kind:"risk"};
+    if(!panel) return {t:null,neden:"Sicil no admin panelde bulunamadı ("+an.sicil+")",kind:"risk"};
     if(panel.durum!=="askıda") return {t:null,neden:"Firma askıda görünmüyor; personel kontrol etmeli",kind:"warn"};
     if(panel.aski && panel.aski.neden!=="Aidat borcu") return {t:null,neden:"Askı nedeni: "+panel.aski.neden+" (ilk fazda tanımlı değil)",kind:"warn"};
-    if(panel.aski && !panel.aski.odeme) return {t:null,neden:"Aidat ödemesi TOPS'ta görünmüyor; personel yanıtlamalı",kind:"warn"};
+    if(panel.aski && !panel.aski.odeme) return {t:null,neden:"Aidat ödemesi sistemde görünmüyor; personel yanıtlamalı",kind:"warn"};
     return {t:T("aski_odendi"),neden:"Ödeme alınmış: "+panel.aski.odeme};
   }
   return {t:null,neden:"Tanımlı konulardan hiçbirine uymuyor",kind:"risk"};
@@ -720,7 +720,7 @@ async function runBot(m,opts){
 
   if(an.sicil){
     m.panel=PANEL[an.sicil]||null;
-    const src=an.konu==="askidan_inme"?"TOPS":"Admin panel";
+    const src=an.konu==="askidan_inme"?"Admin panel (askı/aidat)":"Admin panel";
     if(m.panel){
       let t=src+" kontrolü: "+m.panel.firma+" · "+m.panel.durum;
       if(m.panel.belge) t+=" · belge "+m.panel.belge.tarih+" → "+m.panel.belge.eposta;
@@ -903,7 +903,7 @@ function vLogin(){
       <h2>Tekrarlayan maillere birimin onaylı diliyle, dakikalar içinde yanıt.</h2>
       <div class="feat">
         <div><b>Filtreli kutu</b>Yalnızca tanımlı adrese ve kurallara uyan mailler işlenir.</div>
-        <div><b>Panel ve TOPS kontrolü</b>Sicil no okunur, kayıt kontrol edilir, doğru şablon seçilir.</div>
+        <div><b>Admin panel kontrolü</b>Sicil no okunur, kayıt kontrol edilir, doğru şablon seçilir.</div>
         <div><b>Yapay zekâ taslağı</b>Matbu metin maile göre uyarlanır; son söz personelindir.</div>
         <div><b>Tam izlenebilirlik</b>Kim, ne zaman, hangi şablonla yanıtladı; hepsi kayıtlı.</div>
       </div>
@@ -1044,7 +1044,7 @@ function vDetail(m){
   const thread=onceki.length?`<div class="card"><h3 style="margin-bottom:8px">Bu göndericiyle diğer yazışmalar · ${onceki.length}</h3><div class="thread">${onceki.slice(0,5).map(x=>`<button type="button" onclick="openMail(${x.id})"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.konu)}</span><span class="row" style="gap:8px;flex:none"><span class="pill ${(ST[x.durum]||["",""])[1]}">${(ST[x.durum]||[""])[0]}</span><span class="muted small mono">${rel(x.t)}</span></span></button>`).join("")}</div></div>`:"";
   const conf = a ? (a.motor==="ai"?`%${a.guven}`:"Kural eşleşmesi") : "";
   const analysis = `<div class="card analysis"><div class="row" style="justify-content:space-between"><h3>Robot analizi</h3>${m.durum!=="isleniyor"&&m.durum!=="gonderildi"&&!pend?`<button class="btn ghost sm" onclick="reprocess(${m.id})">Baştan işle${aiOn()?" (yapay zekâ ile)":""}</button>`:""}</div>
-    ${a?`<div class="chips-row"><div class="kv"><span>Konu</span><b>${esc(konuAd(a.konu))}</b></div><div class="kv"><span>${a.motor==="ai"?"Güven":"Yöntem"}</span><b>${conf}</b></div><div class="kv"><span>Sicil no</span><b class="mono">${esc(a.sicil||"Yok")}</b></div><div class="kv"><span>Panel / TOPS</span><b>${p?esc(p.firma)+" · "+esc(p.durum):a.sicil?"Kayıt yok":"Sorgulanmadı"}</b></div></div>`:(m.durum==="disi"?`<p class="muted small">Filtreye uymadığı için analiz yapılmadı.</p>`:"")}
+    ${a?`<div class="chips-row"><div class="kv"><span>Konu</span><b>${esc(konuAd(a.konu))}</b></div><div class="kv"><span>${a.motor==="ai"?"Güven":"Yöntem"}</span><b>${conf}</b></div><div class="kv"><span>Sicil no</span><b class="mono">${esc(a.sicil||"Yok")}</b></div><div class="kv"><span>Admin panel</span><b>${p?esc(p.firma)+" · "+esc(p.durum):a.sicil?"Kayıt yok":"Sorgulanmadı"}</b></div></div>`:(m.durum==="disi"?`<p class="muted small">Filtreye uymadığı için analiz yapılmadı.</p>`:"")}
     <details class="steps-d" ${m.durum==="isleniyor"||!a?"open":""}><summary>Robotun yaptıkları · ${m.adimlar.length} adım</summary><ul class="steplog">${m.adimlar.map(x=>`<li class="${x.kind}"><span class="tm">${hm(x.t)}</span><span class="ic"></span><span>${esc(x.text)}</span></li>`).join("")}</ul></details></div>`;
   let reply="";
   if(pend){
@@ -1251,7 +1251,7 @@ function vSettings(){
     <label class="chk"><input type="checkbox" ${S.settings.otoGonder?"checked":""} onchange="S.settings.otoGonder=this.checked;save()"><span><b>Otomatik gönderim</b><br><span class="muted small">Otomatik moddaki şablonlar onaysız gönderilir. Otomatik gönderimde her zaman matbu metin kullanılır.</span></span></label>
     <label class="f">Otomatik gönderim için en az güven: %<span id="esikV">${S.settings.esik}</span><input type="range" min="50" max="99" value="${S.settings.esik}" oninput="S.settings.esik=+this.value;$('#esikV').textContent=this.value;save()"></label>
   </div>
-  <div class="card" style="display:flex;flex-direction:column;gap:10px"><h3>Örnek panel / TOPS kayıtları</h3><p class="muted small">Gerçek sistemde admin panel ve TOPS sorgulanacak. Prototipte bu kayıtlar kullanılıyor; yeni mail yazarken bu sicil numaralarını deneyin.</p>
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><h3>Örnek admin panel kayıtları</h3><p class="muted small">Gerçek sistemde admin panel sorgulanacak. Prototipte bu kayıtlar kullanılıyor; yeni mail yazarken bu sicil numaralarını deneyin.</p>
     <div class="tbl-wrap"><table><tr><th>Sicil</th><th>Firma</th><th>Sonuç</th></tr>${Object.entries(PANEL).map(([k,v])=>`<tr><td class="mono">${k}</td><td>${esc(v.firma)}</td><td class="small">${esc(v.senaryo)}</td></tr>`).join("")}</table></div></div>
   <div class="card" style="display:flex;flex-direction:column;gap:10px"><h3>Supabase bağlantısı</h3><p class="muted small">Yanıt üretimi Supabase'deki <span class="mono">cevap-asistani-yanit-uret</span> fonksiyonu üzerinden Claude API ile yapılır. Proje adresi ve anon (public) anahtar yeterlidir; Claude API anahtarı Supabase'de gizli değişken olarak durur.</p>
     <label class="f">Proje adresi<input class="inp" id="sbUrl" placeholder="https://xxxx.supabase.co" value="${esc((sbConf()||{}).url||"")}"></label>
