@@ -384,7 +384,7 @@ const AI = {fn:null,state:"bekleniyor",msg:"",mode:""}; // bekleniyor | hazir | 
 async function aiInit(){
   AI.state="bekleniyor"; AI.fn=null; AI.mode="";
   if(sbConf()){
-    try{ const d=await (await sb("durum",{})).json(); if(d.yz){AI.fn=true;AI.mode="sb";AI.model=d.model;} else AI.msg="Supabase'de ANTHROPIC_API_KEY tanımlı değil."; }
+    try{ const d=await (await sb("durum",{})).json(); if(d.yz){AI.fn=true;AI.mode="sb";AI.model=d.model;AI.saglayici=d.saglayici;} else AI.msg="Supabase'de ANTHROPIC_API_KEY tanımlı değil."; }
     catch(e){ AI.msg="Supabase'e bağlanılamadı. Adres ve anahtarı kontrol edin."; }
   }
   if(!AI.fn){ try{ const f=(window.claude && window.claude.use) ? await window.claude.use("sample") : null; if(f){AI.fn=f;AI.mode="claude";} }catch(e){} }
@@ -534,7 +534,7 @@ async function runBot(m,opts){
   if(!an){ an=ruleClassify(m); const n=findNumbers(m); an.sicil=n.sicil; an.siparis=n.siparis; }
   else { const n=findNumbers(m); an.sicil=an.sicil||n.sicil; an.siparis=an.siparis||n.siparis; }
   an.motor=motor; m.analiz=an;
-  step(m,"Konu: "+konuAd(an.konu)+(motor==="ai"?" (yapay zekâ, güven %"+an.guven+")":" (kural motoru, anahtar kelime eşleşmesi)"),motor==="ai"?"ai":"");
+  step(m,"Konu: "+konuAd(an.konu)+(motor==="ai"?(AI.saglayici==="benzerlik"?" (Supabase eşleştirme, güven %":" (yapay zekâ, güven %")+an.guven+")":" (kural motoru, anahtar kelime eşleşmesi)"),motor==="ai"?"ai":"");
   step(m,an.sicil?"Sicil no okundu: "+an.sicil:"Mailde sicil no bulunamadı",an.sicil?"":"warn");
   upd(); await pause(400);
 
@@ -707,7 +707,7 @@ function render(){
 }
 function aiPill(){
   if(!S.settings.ai) return `<span class="pill p-idle"><span class="dot"></span>Yapay zekâ kapalı · kural motoru</span>`;
-  if(AI.state==="hazir") return AI.mode==="sb"?`<span class="pill p-ok" title="Supabase edge function üzerinden Claude API"><span class="dot"></span>Yapay zekâ hazır · Supabase</span>`:`<span class="pill p-ok" title="İlk kullanımda claude.ai izin ister"><span class="dot"></span>Yapay zekâ hazır</span>`;
+  if(AI.state==="hazir") return AI.mode==="sb"?`<span class="pill p-ok" title="${AI.saglayici==="benzerlik"?"Konu tespiti Supabase gte-small benzerlik modeli ve kurallarla; yanıt onaylı şablon ve panel kaydından":"Supabase edge function üzerinden Claude API"}"><span class="dot"></span>${AI.saglayici==="benzerlik"?"Akıllı eşleştirme · Supabase":"Yapay zekâ hazır · Supabase"}</span>`:`<span class="pill p-ok" title="İlk kullanımda claude.ai izin ister"><span class="dot"></span>Yapay zekâ hazır</span>`;
   if(AI.state==="bekleniyor") return `<span class="pill p-idle"><span class="dot"></span>Yapay zekâ kontrol ediliyor</span>`;
   if(AI.state==="kapali") return `<span class="pill p-warn"><span class="dot"></span>Yapay zekâ izni yok · kural motoru</span>`;
   return `<span class="pill p-warn" title="${esc(AI.msg||"Supabase bağlantısı tanımlı değil")}"><span class="dot"></span>Yapay zekâ yok · kural motoru</span>`;
@@ -887,7 +887,7 @@ function vDetail(m){
       <dl class="hdr"><dt>Kime</dt><dd class="mono">${esc(replyTo(m))}</dd><dt>Konu</dt><dd>Ynt: ${esc(m.konu)}</dd></dl>
       <div class="dtabs" role="tablist" aria-label="Taslak kaynağı">
         <button class="dtab" role="tab" aria-selected="${tk.sec==="matbu"}" ${tid?"":"disabled"} onclick="selDraft(${m.id},'matbu')">Matbu şablon</button>
-        <button class="dtab" role="tab" aria-selected="${tk.sec==="ai"}" onclick="selDraft(${m.id},'ai')">Yapay zekâ taslağı${tk.aiDurum==="hazir"?" ✓":""}</button>
+        <button class="dtab" role="tab" aria-selected="${tk.sec==="ai"}" onclick="selDraft(${m.id},'ai')">${AI.saglayici==="benzerlik"?"Kişiselleştirilmiş taslak":"Yapay zekâ taslağı"}${tk.aiDurum==="hazir"?" ✓":""}</button>
       </div>
       <div class="notes">${notes}</div>
       <textarea class="inp draft ${writing?"streaming":""}" id="draft" aria-label="Yanıt metni" ${writing||viewer?"readonly":""} oninput="editDraft(${m.id},this.value);phCheck()" placeholder="${tk.sec==="ai"?(aiOn()?"Yapay zekâ taslağı için aşağıdaki düğmeye basın.":"Yapay zekâ bu görünümde kullanılamıyor. Şablon seçin ya da yanıtı kendiniz yazın."):"Yanıtı yazın"}">${esc(val)}</textarea>
